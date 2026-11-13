@@ -1,23 +1,29 @@
---- talks.lua — list the decks in presentations/, with a link to each built one.
+--- talks.lua — list the decks in this repo, with a link to each built one.
 --
 -- A code block with the `talks` class becomes a table of every deck: its title,
--- its date, and the one-line description in its front matter.
+-- its author, its date, and the one-line description in its front matter.
 --
---   ```{.talks}
+--   ```{.talks dir="*" built=build}
 --   ```
 --
 -- The point is that the list cannot go stale. It is read from the deck files
--- themselves at build time, so a deck started with `just talk` appears in the
--- next build and one that is deleted stops appearing. Nothing is written twice.
+-- themselves at build time, so a new deck appears in the next build and one
+-- that is deleted stops appearing. Nothing is written twice.
 --
--- Attributes, both optional:
---   dir=presentations   where to look for decks
+-- Attributes, all optional:
+--   dir=presentations   where to look for decks. `dir="*"` scans every
+--                       top-level directory that holds a .md file (skipping
+--                       build/, filters/, templates/ and hidden directories),
+--                       so each person's folder is picked up automatically.
 --   ext=html            the extension of the built deck each row links to
+--   built=.             where built decks live. Links stay relative to the
+--                       page (`ivan/foo.html`), but the existence check looks
+--                       under this directory (`build/ivan/foo.html`).
 --
 -- Two things it warns about on stderr rather than hiding:
 --   * a deck with no `description:`, because the listing then has a hole in it
 --   * a deck that has not been built, because the row links to a file that is
---     not there. `just build-presentations` builds them all.
+--     not there. `just build-all` builds them all.
 
 local DEFAULT_DIR = 'presentations'
 local DEFAULT_EXT = 'html'
@@ -40,7 +46,7 @@ local function file_exists (path)
   return false
 end
 
---- The title, date, and description a deck's front matter declares.
+--- The title, author, date, and description a deck's front matter declares.
 local function deck_meta (path)
   local text = read_file(path)
   if not text then return nil end
@@ -53,13 +59,15 @@ local function deck_meta (path)
   end
   return {
     title = value 'title',
+    author = value 'author',
     date = value 'date',
     description = value 'description',
   }
 end
 
---- Every deck in `dir`, newest first, then by title.
-local function decks (dir, ext)
+--- Every deck in `dir`. Links are relative to the page; the existence check
+--- looks under `built`, where the build writes its output.
+local function decks (dir, ext, built)
   local found = {}
   local ok, names = pcall(pandoc.system.list_directory, dir)
   if not ok then
@@ -72,9 +80,10 @@ local function decks (dir, ext)
     if slug then
       local meta = deck_meta(pandoc.path.join{ dir, name })
       if meta then
-        local built = pandoc.path.join{ dir, slug .. '.' .. ext }
-        if not file_exists(built) then
-          warn_about(built .. ' is not built yet — run `just build-presentations`')
+        local target = pandoc.path.join{ dir, slug .. '.' .. ext }
+        local output = pandoc.path.join{ built, target }
+        if not file_exists(output) then
+          warn_about(output .. ' is not built yet — run `just build-all`')
         end
         if not meta.description then
           warn_about(name .. ' has no description: in its front matter')
@@ -82,21 +91,40 @@ local function decks (dir, ext)
         found[#found + 1] = {
           slug = slug,
           title = meta.title or slug,
+          author = meta.author,
           date = meta.date,
           description = meta.description,
-          target = built,
+          target = target,
         }
       end
     end
   end
-
-  table.sort(found, function (a, b)
-    -- Newest first. A deck with no date sorts last rather than crashing.
-    local a_date, b_date = a.date or '', b.date or ''
-    if a_date ~= b_date then return a_date > b_date end
-    return a.title < b.title
-  end)
   return found
+end
+
+--- Every top-level directory that holds at least one .md file — each person's
+--- folder, without anyone maintaining a list of people.
+local function deck_dirs ()
+  local skip = { build = true, filters = true, templates = true,
+                 node_modules = true }
+  local dirs = {}
+  local ok, names = pcall(pandoc.system.list_directory, '.')
+  if not ok then return dirs end
+  for _, name in ipairs(names) do
+    if not name:match('^%.') and not skip[name] then
+      local readable, entries = pcall(pandoc.system.list_directory, name)
+      if readable then
+        for _, entry in ipairs(entries) do
+          if entry:match('%.md$') then
+            dirs[#dirs + 1] = name
+            break
+          end
+        end
+      end
+    end
+  end
+  table.sort(dirs)
+  return dirs
 end
 
 --- A cell's text, safe to put between two pipes.
@@ -111,11 +139,12 @@ end
 -- pandoc Table by hand, and it parses each description as Markdown, so a deck
 -- can put a `code span` or a link in its own summary.
 local function table_for (list)
-  local rows = { '| Talk | Date | What it covers |', '|---|---|---|' }
+  local rows = { '| Talk | Author | Date | What it covers |', '|---|---|---|---|' }
   for _, deck in ipairs(list) do
-    rows[#rows + 1] = ('| [%s](%s) | %s | %s |'):format(
+    rows[#rows + 1] = ('| [%s](%s) | %s | %s | %s |'):format(
       cell(deck.title),
       deck.target,
+      cell(deck.author),
       cell(deck.date),
       cell(deck.description)
     )
@@ -129,7 +158,23 @@ return {
       if not block.classes:includes('talks') then return nil end
       local dir = block.attributes.dir or DEFAULT_DIR
       local ext = block.attributes.ext or DEFAULT_EXT
-      local list = decks(dir, ext)
+      local built = block.attributes.built or '.'
+      local dirs = dir == '*' and deck_dirs() or { dir }
+
+      local list = {}
+      for _, d in ipairs(dirs) do
+        for _, deck in ipairs(decks(d, ext, built)) do
+          list[#list + 1] = deck
+        end
+      end
+
+      table.sort(list, function (a, b)
+        -- Newest first. A deck with no date sorts last rather than crashing.
+        local a_date, b_date = a.date or '', b.date or ''
+        if a_date ~= b_date then return a_date > b_date end
+        return a.title < b.title
+      end)
+
       if #list == 0 then
         return pandoc.Para{ pandoc.Emph{ pandoc.Str 'No talks yet.' } }
       end

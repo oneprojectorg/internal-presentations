@@ -1,0 +1,9 @@
+/* index.css — layout for the site's front door (build/index.html) only.
+   Loaded after oneproject.css, which handles type and color; this file
+   just keeps the page column off the screen edges. */
+
+body {
+  max-width: 80%;
+  margin: 0 auto;
+  padding: 2em 0 4em;
+}

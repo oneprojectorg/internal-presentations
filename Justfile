@@ -26,6 +26,25 @@ build-all:
         just build-presentation "$file"
     done
 
+# Build build/index.html — the site's front door, listing every built deck.
+# filters/talks.lua generates the table from each deck's front matter.
+build-index:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p build
+    pandoc index.md \
+    -f markdown -t html \
+    --standalone \
+    --embed-resources \
+    --css templates/oneproject.css \
+    --css templates/index.css \
+    --lua-filter filters/talks.lua \
+    --lua-filter filters/include.lua \
+    -o build/index.html
+
+# Build the whole site into build/: every deck, then the index that links them.
+build-site: build-all build-index
+
 clean:
     rm -rf build
 
