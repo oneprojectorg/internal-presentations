@@ -1,0 +1,897 @@
+/* ============================================================================
+   oneproject.css
+   Slide theme for W3C Slidy decks built with pandoc (`just build-presentation`).
+
+   Design tokens are lifted from the live One Project site:
+     https://oneproject.org/wp-content/themes/oneproject-v2/css/screen.css
+   Body copy is Roboto, headings are Roboto Serif at light weights with tight
+   negative tracking, set on warm cream paper. Amber (#dd7c01) is the accent —
+   on the site it is the colour every link turns on hover.
+
+   NOTES ON SLIDY
+   - This file is linked AFTER the W3C slidy.css, so plain overrides win.
+   - slidy.js writes `display` inline on `div.slide`, so never lay a slide out
+     with flex/grid — it will be clobbered. Use padding/margins instead.
+   - No @import and no remote URLs: `pandoc --embed-resources` must be able to
+     inline everything for a single-file, offline-capable deck.
+
+   THEME SWITCHES
+   - Cream title slide instead of the dark panel: set --op-title-bg to
+     var(--op-paper) and --op-title-ink to var(--op-ink-strong).
+   - Whole-deck retheme: edit the :root block, nothing below it.
+   ========================================================================= */
+
+:root {
+  /* paper */
+  --op-paper:       #fffcf6;  /* primary cream background */
+  --op-paper-alt:   #fff8e8;  /* code blocks, inline code */
+  --op-paper-warm:  #f9f1e2;  /* table header wash */
+
+  /* ink */
+  --op-ink:         #5f584d;  /* body copy */
+  --op-ink-strong:  #4c463c;  /* headings */
+  --op-ink-muted:   #887a63;  /* captions, author, footnotes */
+  --op-ink-deep:    #142326;  /* near-black teal, site hero panels */
+  --op-slate:       #3a4649;  /* secondary dark */
+  --op-rule:        #e0d7c9;  /* hairlines */
+
+  /* accents */
+  --op-amber:       #dd7c01;  /* links on hover, list markers, rules */
+  --op-vermilion:   #f24405;  /* emphasis, strong */
+  --op-teal:        #0396a6;  /* links, secondary accent */
+
+  /* title slide */
+  --op-title-bg:    var(--op-ink-deep);
+  --op-title-ink:   var(--op-paper);
+
+  /* type */
+  --op-font-sans:  "Roboto", "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  --op-font-serif: "Roboto Serif", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --op-font-mono:  "Roboto Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  /* div.toolbar's own box, in one place so div.slide's bottom padding can
+     clear it exactly — see the note above the `div.slide` rule. */
+  --op-toolbar-h:          1.4em;
+  --op-toolbar-clearance: calc(var(--op-toolbar-h) + 0.1em * 2 + 1px + 0.4em);
+}
+
+/* ---------------------------------------------------------------- canvas -- */
+
+html {
+  background-color: var(--op-paper);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--op-ink);
+  background-color: var(--op-paper);
+  font-family: var(--op-font-sans);
+  font-weight: 380;                       /* the site's slightly-light body */
+  font-size: clamp(15px, 1.8vw, 25px);    /* readable on laptop and projector */
+  line-height: 1.5;
+  letter-spacing: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* slidy.js runs every slide in "single_slide" mode by default, which sets
+   `div.slide { position: absolute; top: 0; bottom: 0; }` — a box pinned to
+   exactly the viewport's height, with no `overflow` rule of its own. A slide
+   whose content runs taller than the viewport (a long bullet list, a table, a
+   diagram with a caption below it) has no way to scroll into view: the extra
+   content either spills silently past the bottom edge, or the page scrolls
+   underneath `div.toolbar`, which stays fixed at the viewport's true bottom
+   and paints over whatever is there. `overflow-y: auto` scopes the scroll to
+   the slide itself, and the bottom padding below is sized to clear the
+   toolbar so the last line of content never sits behind it. */
+/* slidy.css bundles two legacy rules keyed on `max-device-width` — the
+   monitor's hardware resolution, not the browser window:
+     max-device-width: 1024px -> div.slide { font-size: 100% }
+     max-device-width:  800px -> div.slide { font-size: 200% }
+   Meant for old feature phones. No real monitor is 800px wide, so a human
+   viewer never trips it — but a headless or automated browser (including
+   this repo's own puppeteer-based checks) commonly reports a virtual
+   screen of 800x600 regardless of the actual window size, which doubles
+   every heading's font size and makes slides overflow far more than they
+   do for anyone actually looking at this deck. Our own sizing already
+   responds to the *viewport* width via `clamp()` on `body`, so pin
+   `div.slide`'s font-size back to 100% and ignore `screen.width` for good.
+   Plain `@media screen` (no device-width) beats both of slidy's rules:
+   same selector, and this file loads after slidy.css. */
+@media screen {
+  div.slide {
+    font-size: 100%;
+  }
+}
+
+div.slide {
+  padding: 2.2em 3em calc(3em + var(--op-toolbar-clearance));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  line-height: 1.5;
+  background-color: transparent;
+}
+
+/* A thin, on-theme scrollbar for the (now rare) slide that needs one — most
+   browsers; Firefox falls back to its own default and stays readable. */
+div.slide {
+  scrollbar-width: thin;
+  scrollbar-color: var(--op-rule) transparent;
+}
+
+div.slide::-webkit-scrollbar {
+  width: 8px;
+}
+
+div.slide::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+div.slide::-webkit-scrollbar-thumb {
+  background-color: var(--op-rule);
+  border-radius: 4px;
+}
+
+div.slide.dark::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 252, 246, 0.28);
+}
+
+div.handout {
+  margin-left: 3em;
+  margin-right: 3em;
+}
+
+/* ------------------------------------------------------------- headings -- */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--op-font-serif);
+  color: var(--op-ink-strong);
+  font-weight: 300;
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+div.slide h1 {
+  margin: 0 0 1.1em 0;
+  padding: 0;
+  font-size: 2.15em;
+  font-weight: 200;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+/* Short amber rule under content-slide titles. Scoped to `.section` so the
+   title slide's `h1.title` is left alone. */
+div.slide.section > h1::after {
+  content: "";
+  display: block;
+  width: 2.4em;
+  height: 2px;
+  margin-top: 0.42em;
+  background-color: var(--op-amber);
+}
+
+div.slide h2 {
+  margin: 1.5em 0 0.5em;
+  font-size: 1.5em;
+  font-weight: 300;
+  line-height: 1.15;
+}
+
+div.slide h3 {
+  margin: 1.3em 0 0.4em;
+  font-size: 1.2em;
+  font-weight: 400;
+}
+
+div.slide h4,
+div.slide h5,
+div.slide h6 {
+  margin: 1.2em 0 0.35em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: var(--op-font-sans);
+  letter-spacing: 0.02em;
+}
+
+/* First heading after the slide title shouldn't add a second big gap. */
+div.slide h1 + h2,
+div.slide h1 + h3 {
+  margin-top: 0;
+}
+
+/* ---------------------------------------------------------- title slide -- */
+
+div.slide.titlepage {
+  text-align: left;
+  padding: 0 3em;
+  min-height: 100vh;
+  color: var(--op-title-ink);
+  background-color: var(--op-title-bg);
+}
+
+div.slide.titlepage h1.title {
+  padding-top: 22vh;
+  margin: 0 0 1.4em 0;
+  max-width: 24em;
+  color: inherit;
+  font-size: 3em;
+  font-weight: 100;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+div.slide.titlepage h1.title::after {
+  content: "";
+  display: block;
+  width: 2.4em;
+  height: 2px;
+  margin-top: 0.5em;
+  background-color: var(--op-amber);
+}
+
+div.slide.titlepage p.author,
+div.slide.titlepage p.date {
+  margin: 0 0 0.4em 0;
+  font-family: var(--op-font-sans);
+  font-size: 0.95em;
+  color: inherit;
+  opacity: 0.78;
+}
+
+div.slide.titlepage p.date {
+  font-size: 0.85em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+div.slide.titlepage a {
+  color: inherit;
+}
+
+div.slide.titlepage a:hover {
+  color: var(--op-amber);
+}
+
+/* ------------------------------------------------- table of contents slide */
+
+div.slide#TOC {
+  font-size: 0.95em;
+}
+
+div.slide#TOC > ul {
+  margin-left: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+div.slide#TOC > ul > li {
+  margin: 0 0 0.55em 0;
+  padding-bottom: 0.45em;
+  border-bottom: 1px solid var(--op-rule);
+  font-family: var(--op-font-serif);
+  font-size: 1.15em;
+}
+
+div.slide#TOC > ul > li::before {
+  content: none;
+}
+
+div.slide#TOC ul ul {
+  margin: 0.3em 0 0 0;
+  padding-left: 1em;
+  font-family: var(--op-font-sans);
+  font-size: 0.8em;
+}
+
+div.slide#TOC a {
+  text-decoration: none;
+}
+
+div.slide#TOC a:hover {
+  color: var(--op-amber);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------- prose ----- */
+
+/* slidy.css indents every block by 1em; the slide's own padding handles that,
+   so the left/right margins are reset here rather than doubled up. */
+p, ul, ol, dl, blockquote, pre, table,
+div.slide h2, div.slide h3, div.slide h4, div.slide h5, div.slide h6 {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+p, ul, ol, dl, blockquote, pre, table {
+  margin-top: 0.6em;
+  margin-bottom: 0.8em;
+}
+
+strong, b {
+  font-weight: 600;
+  color: var(--op-ink-strong);
+}
+
+em, i {
+  font-style: italic;
+}
+
+/* The site treats <mark> as a warm highlight rather than yellow marker. */
+mark {
+  background-color: #fceec1;
+  color: var(--op-ink-strong);
+  padding: 0 0.15em;
+}
+
+hr {
+  height: 0;
+  margin: 1.4em 0;
+  border: 0;
+  border-top: 1px solid var(--op-rule);
+}
+
+/* --------------------------------------------------------------- links --- */
+
+a,
+a:link,
+a:visited {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.16em;
+  transition: color 0.15s ease-in-out;
+}
+
+a:hover,
+a:active,
+a:focus {
+  color: var(--op-amber);
+  text-decoration: underline;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--op-amber);
+  outline-offset: 2px;
+}
+
+a img {
+  border: 0;
+}
+
+/* --------------------------------------------------------------- lists --- */
+
+div.slide ul,
+div.slide ol {
+  margin-left: 0;
+  padding-left: 1.3em;
+}
+
+div.slide ul {
+  list-style: none;
+  padding-left: 1.15em;
+}
+
+div.slide ul > li {
+  position: relative;
+  margin: 0.45em 0 0 0;
+  font-size: 1em;
+  font-style: normal;      /* slidy.css italicises nested items — undo it */
+  list-style: none;        /* slidy.css sets the square marker on the li */
+}
+
+/* Amber en-dash marker, matching the site's spare list treatment. */
+div.slide ul > li::before {
+  content: "–";
+  position: absolute;
+  left: -1.15em;
+  color: var(--op-amber);
+  font-weight: 400;
+}
+
+div.slide ol > li {
+  margin: 0.45em 0 0 0;
+  font-size: 1em;
+  font-style: normal;
+}
+
+div.slide ol > li::marker {
+  color: var(--op-amber);
+}
+
+/* Nested lists keep the parent's size and upright style. */
+div.slide li li,
+div.slide li li li {
+  font-size: 1em;
+  font-style: normal;
+}
+
+div.slide li ul,
+div.slide li ol {
+  margin-top: 0.3em;
+}
+
+div.slide li ul > li::before {
+  content: "·";
+}
+
+dt {
+  font-weight: 600;
+  color: var(--op-ink-strong);
+}
+
+dd {
+  margin: 0.2em 0 0.6em 1.2em;
+}
+
+/* ---------------------------------------------------------- quotations --- */
+
+blockquote {
+  margin: 1.1em 0;
+  padding: 0.1em 0 0.1em 1.1em;
+  border-left: 3px solid var(--op-rule);
+  font-family: var(--op-font-serif);
+  font-size: 1.1em;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--op-ink-muted);
+}
+
+blockquote p:first-child { margin-top: 0; }
+blockquote p:last-child  { margin-bottom: 0; }
+
+blockquote cite,
+blockquote footer {
+  display: block;
+  margin-top: 0.5em;
+  font-family: var(--op-font-sans);
+  font-size: 0.75em;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--op-ink-muted);
+}
+
+/* ---------------------------------------------------------------- code --- */
+
+code, kbd, samp, pre {
+  font-family: var(--op-font-mono);
+  font-variant-ligatures: none;
+}
+
+code {
+  font-size: 0.86em;
+  padding: 0.1em 0.3em;
+  color: var(--op-ink-strong);
+  background-color: var(--op-paper-alt);
+  border: 1px solid var(--op-rule);
+  border-radius: 3px;
+}
+
+pre {
+  margin: 0.9em 0;
+  padding: 0.85em 1em;
+  overflow-x: auto;
+  font-size: 0.72em;
+  line-height: 1.45;
+  color: var(--op-ink-strong);
+  background-color: var(--op-paper-alt);
+  border: 1px solid var(--op-rule);
+  border-left: 3px solid var(--op-amber);
+  border-radius: 0 3px 3px 0;
+}
+
+/* Inside a <pre>, drop the inline-code chrome. */
+pre code {
+  padding: 0;
+  font-size: 1em;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+div.sourceCode {
+  margin: 0.9em 0;
+  overflow: auto;
+}
+
+/* Line numbers (`--number-lines`) sit in the gutter. */
+pre.numberSource {
+  border-left: 3px solid var(--op-amber);
+}
+
+pre.numberSource code > span > a:first-child::before {
+  color: var(--op-ink-muted);
+  opacity: 0.7;
+}
+
+/* --------------------------------------------------------------- tables -- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.85em;
+}
+
+caption {
+  margin-bottom: 0.5em;
+  font-family: var(--op-font-serif);
+  font-size: 1.05em;
+  font-style: italic;
+  color: var(--op-ink-muted);
+  text-align: left;
+}
+
+th, td {
+  padding: 0.5em 0.7em;
+  text-align: left;
+  vertical-align: top;
+  border: 0;
+}
+
+thead th {
+  font-family: var(--op-font-sans);
+  font-weight: 600;
+  color: var(--op-ink-strong);
+  background-color: var(--op-paper-warm);
+  border-bottom: 2px solid var(--op-ink-strong);
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--op-rule);
+}
+
+tbody tr:last-child {
+  border-bottom: 2px solid var(--op-rule);
+}
+
+/* ------------------------------------------------ figures and diagrams --- */
+
+/* PlantUML output from `filters/diagram.lua` lands here — diagrams are the
+   point of these decks, so give them room. `div.slide`'s own
+   `overflow-y: auto` (above) is the backstop if a diagram-heavy slide still
+   runs past the viewport at this size. */
+img, svg, video {
+  max-width: 100%;
+  max-height: 78vh;
+  height: auto;
+}
+
+/* A diagram on a line of its own is the slide's content, so let it fill the
+   slide rather than sit at PlantUML's intrinsic pixel size. `object-fit`
+   preserves the aspect ratio when `max-height` is what ends up constraining
+   the box.
+
+   filters/diagram.lua emits an uncaptioned diagram as a bare image, so the
+   first two selectors are the ones that catch a rendered ```plantuml block.
+   The paragraph forms below catch a hand-written image. */
+div.slide > img,
+div.slide > svg,
+div.slide p > img:only-child,
+div.slide p > svg:only-child {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+  margin: 1em auto;
+}
+
+figure {
+  margin: 1.2em 0;
+  text-align: center;
+}
+
+figcaption {
+  margin-top: 0.5em;
+  font-family: var(--op-font-sans);
+  font-size: 0.78em;
+  letter-spacing: 0.03em;
+  color: var(--op-ink-muted);
+}
+
+/* ------------------------------------------------------------- columns --- */
+
+/* pandoc's ::: columns / ::: column fenced divs */
+div.columns {
+  display: flex;
+  gap: 2em;
+  align-items: flex-start;
+}
+
+div.column {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ------------------------------------------------- pandoc odds and ends -- */
+
+/* Speaker notes — hidden on screen, printed in the handout.
+   Write them as `::: handout`, which is Slidy's own class. `::: notes` is
+   pandoc's syntax for beamer and reveal.js; the slidy writer drops the block
+   and its text never reaches the page. div.notes is kept here so the same
+   Markdown behaves when it is built with -t html instead. */
+div.handout,
+div.notes {
+  display: none;
+}
+
+/* Citeproc bibliography */
+div#refs,
+div.csl-bib-body {
+  font-size: 0.8em;
+  color: var(--op-ink-muted);
+}
+
+div.csl-entry {
+  margin-bottom: 0.5em;
+}
+
+.footnote,
+.footnotes {
+  font-size: 0.78em;
+  color: var(--op-ink-muted);
+}
+
+.footnotes hr {
+  border-top: 1px solid var(--op-rule);
+}
+
+.smaller { font-size: 0.82em; }
+.bigger  { font-size: 1.25em; }
+.center  { text-align: center; }
+
+/* An escape hatch for a full-bleed dark slide: `# Title {.dark}` */
+div.slide.dark {
+  color: var(--op-paper);
+  background-color: var(--op-ink-deep);
+  min-height: 100vh;
+}
+
+div.slide.dark h1,
+div.slide.dark h2,
+div.slide.dark h3,
+div.slide.dark h4 {
+  color: var(--op-paper);
+}
+
+/* On light slides `strong` is darker than the body copy; on a dark slide that
+   same ink is nearly invisible, so weight alone carries the emphasis. */
+div.slide.dark strong,
+div.slide.dark b,
+div.slide.dark dt,
+div.slide.dark thead th,
+div.slide.titlepage strong,
+div.slide.titlepage b {
+  color: var(--op-paper);
+}
+
+div.slide.dark thead th {
+  background-color: rgba(255, 252, 246, 0.08);
+  border-bottom-color: rgba(255, 252, 246, 0.45);
+}
+
+div.slide.dark tbody tr,
+div.slide.dark tbody tr:last-child {
+  border-bottom-color: rgba(255, 252, 246, 0.18);
+}
+
+div.slide.dark hr {
+  border-top-color: rgba(255, 252, 246, 0.22);
+}
+
+div.slide.dark code,
+div.slide.dark pre {
+  color: var(--op-paper);
+  background-color: rgba(255, 252, 246, 0.08);
+  border-color: rgba(255, 252, 246, 0.18);
+}
+
+/* ...but the <code> nested inside a <pre> keeps no chrome of its own. */
+div.slide.dark pre code {
+  background: none;
+  border: 0;
+}
+
+div.slide.dark blockquote {
+  color: rgba(255, 252, 246, 0.75);
+  border-left-color: rgba(255, 252, 246, 0.28);
+}
+
+/* pandoc's highlight palette is tuned for light backgrounds — its navy and
+   dark-green tokens are unreadable on a dark slide, so remap them. */
+div.slide.dark pre code span,
+div.slide.titlepage pre code span {
+  color: rgba(255, 252, 246, 0.92);
+}
+
+div.slide.dark pre code span.kw,
+div.slide.dark pre code span.cf,
+div.slide.dark pre code span.im,
+div.slide.dark pre code span.dt,
+div.slide.titlepage pre code span.kw {
+  color: #eedc94;
+  font-weight: 500;
+}
+
+div.slide.dark pre code span.st,
+div.slide.dark pre code span.ss,
+div.slide.dark pre code span.ch,
+div.slide.dark pre code span.vs,
+div.slide.titlepage pre code span.st {
+  color: #8fd3dc;
+}
+
+div.slide.dark pre code span.dv,
+div.slide.dark pre code span.bn,
+div.slide.dark pre code span.fl,
+div.slide.dark pre code span.cn,
+div.slide.dark pre code span.at {
+  color: #f0a860;
+}
+
+div.slide.dark pre code span.co,
+div.slide.dark pre code span.do,
+div.slide.titlepage pre code span.co {
+  color: rgba(255, 252, 246, 0.55);
+  font-style: italic;
+}
+
+/* --------------------------------------------------- slidy chrome ------- */
+
+div.toolbar {
+  height: var(--op-toolbar-h);
+  padding: 0.1em 1.2em;
+  font-family: var(--op-font-sans);
+  font-size: 55%;
+  letter-spacing: 0.04em;
+  color: var(--op-ink-muted);
+  background-color: var(--op-paper-alt);
+  border-top: 1px solid var(--op-rule);
+}
+
+div.toolbar span.copyright {
+  color: var(--op-ink-muted);
+}
+
+div.toolbar a:link,
+div.toolbar a:visited {
+  color: var(--op-ink-muted);
+  text-decoration: none;
+}
+
+div.toolbar a:hover,
+div.toolbar a:active {
+  color: var(--op-amber);
+  text-decoration: underline;
+}
+
+/* The "C" contents overlay (slidy's built-in outline) */
+div.slidy_toc {
+  padding: 1.2em 1.4em;
+  font-family: var(--op-font-sans);
+  font-size: 60%;
+  color: var(--op-ink);
+  background-color: var(--op-paper);
+  border: 1px solid var(--op-rule);
+  border-radius: 3px;
+  box-shadow: 0 8px 28px rgba(20, 35, 38, 0.16);
+}
+
+div.slidy_toc .toc_heading {
+  margin-bottom: 1em;
+  padding-bottom: 0.5em;
+  font-family: var(--op-font-serif);
+  font-weight: 300;
+  color: var(--op-ink-strong);
+  text-align: left;
+  border-bottom: 1px solid var(--op-rule);
+  border-bottom-color: var(--op-rule);
+}
+
+div.slidy_toc a:link,
+div.slidy_toc a:visited {
+  color: var(--op-ink);
+}
+
+div.slidy_toc a:hover {
+  color: var(--op-amber);
+}
+
+/* The "press space" hint slidy injects for the first five seconds. slidy.css
+   fades the whole box to opacity 0.35, which leaves the text unreadable. */
+div.initial_prompt {
+  opacity: 1;
+  color: var(--op-ink-muted);
+  background-color: var(--op-paper-alt);
+  border-top: 1px solid var(--op-rule);
+}
+
+div.initial_prompt p.help,
+div.initial_prompt p.close {
+  margin: 0.25em 0;
+  font-size: 0.7em;
+  letter-spacing: 0.04em;
+  color: var(--op-ink-muted);
+}
+
+a.titleslide {
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* ---------------------------------------------------------------- print -- */
+
+@media print {
+  /* Cream and dark panels are an on-screen treatment; paper gets ink-frugal
+     white so the deck doubles as a readable handout. */
+  html, body {
+    background: #ffffff;
+    color: #000000;
+    font-size: 11.5pt;
+  }
+
+  div.slide {
+    page-break-after: always;
+    page-break-inside: avoid;
+    min-height: 0;
+    padding: 0 0 1.5em 0;
+  }
+
+  div.slide.titlepage,
+  div.slide.dark {
+    min-height: 0;
+    color: #000000;
+    background: #ffffff;
+  }
+
+  div.slide.titlepage h1.title {
+    padding-top: 0;
+    color: #000000;
+  }
+
+  div.slide.dark h1,
+  div.slide.dark h2,
+  div.slide.dark h3,
+  div.slide.dark h4 {
+    color: #000000;
+  }
+
+  div.slide.dark code,
+  div.slide.dark pre {
+    color: #000000;
+    background: #f4f4f4;
+    border-color: #cccccc;
+  }
+
+  /* Print speaker notes with the slide they belong to. */
+  div.handout,
+  div.notes {
+    display: block;
+    margin-top: 1em;
+    padding-left: 1em;
+    border-left: 3px solid #cccccc;
+    font-size: 0.85em;
+    font-style: italic;
+    color: #444444;
+  }
+
+  img, svg {
+    max-height: none;
+  }
+
+  a, a:link, a:visited {
+    color: #000000;
+  }
+
+  div.toolbar,
+  div.slidy_toc,
+  div.initial_prompt,
+  div#controls {
+    display: none !important;
+  }
+}

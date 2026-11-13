@@ -12,6 +12,7 @@ build-presentation FILE:
     pandoc -t slidy \
     --embed-resources \
     --standalone \
+    --css templates/oneproject.css \
     {{filters}} --citeproc \
     "{{FILE}}" \
     -o "$out"

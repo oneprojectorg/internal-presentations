@@ -26,6 +26,17 @@ just clean
 ```
 
 
+## Styling
+
+Decks are themed by `templates/oneproject.css`, a Slidy stylesheet
+using One Project's design tokens (cream paper, Roboto/Roboto Serif,
+amber accents). It's embedded into each built deck, so the output is a
+single self-contained HTML file. Retheme by editing the `:root` token
+block at the top of the file. Useful extras: `# Title {.dark}` for a
+full-bleed dark slide, `::: handout` for speaker notes (hidden on
+screen, shown in print), and `::: columns` / `::: column` for
+side-by-side layout.
+
 ## Pandoc
 
 Pandoc provides us a build pipeline where we translate raw digram code
