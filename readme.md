@@ -22,6 +22,14 @@ layout (e.g. `notifications/notifications-storage.md` builds to
 Give each deck front matter with `title:`, `author:`, `date:`, and a
 one-line `description:` — that's what the site index lists it by.
 
+The quickest start is `just new`, which renders
+`templates/presentation.md` into a fresh deck with the front matter
+filled in (author from `git config user.name`, date today):
+
+```shell
+just new notifications/retry-queues "Retry Queues" "How our retry queues work."
+```
+
 ```shell
 just --list
 just build-all
@@ -64,5 +72,29 @@ what brew installs locally.
 
 ## Pandoc
 
-Pandoc provides us a build pipeline where we translate raw digram code
-blocks into SVGs.
+Pandoc is the whole build pipeline. It parses each Markdown deck into a
+document tree, hands that tree to the Lua filters in `filters/`, then
+writes the result out as a W3C Slidy presentation (`-t slidy`), where
+every `#` heading starts a slide. `--embed-resources` inlines the
+stylesheet and every rendered diagram, so a built deck is one
+self-contained HTML file that works offline.
+
+Each filter rewrites one piece of the tree during the build:
+
+| Filter | What it does |
+|---|---|
+| `include.lua` | Splices other files in with `!include` (the site index pulls in this readme that way). |
+| `diagram.lua` | Runs ```` ```plantuml ```` code blocks through PlantUML and replaces them with the rendered SVG. |
+| `check-links.lua` | Verifies `#anchor` and relative-file links at build time, not when a reader clicks. |
+| `talks.lua` | On the index page, replaces a ```` ```{.talks} ```` block with a table of every deck, read from front matter. |
+| `not-in-format.lua`, `pagebreak.lua` | Format-conditional content and page breaks. |
+
+`--citeproc` adds citation and bibliography processing for decks that
+cite sources.
+
+The payoff: the source of truth is plain text, so decks diff and review
+like code, and the only tools needed are the three the Brewfile
+installs — pandoc, just, and plantuml — the same three CI uses. Even
+`just new` scaffolding runs on pandoc's embedded Lua interpreter
+(`pandoc lua scripts/new-talk.lua`), so the repo has exactly one
+scripting runtime.

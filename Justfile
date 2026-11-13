@@ -22,7 +22,7 @@ build-all:
     set -euo pipefail
     for file in */*.md; do
         [ -e "$file" ] || continue
-        case "$file" in build/*|filters/*) continue ;; esac
+        case "$file" in build/*|filters/*|templates/*|scripts/*) continue ;; esac
         just build-presentation "$file"
     done
 
@@ -44,6 +44,13 @@ build-index:
 
 # Build the whole site into build/: every deck, then the index that links them.
 build-site: build-all build-index
+
+# TITLE and DESCRIPTION are optional but worth giving: the description is the
+# row the deck gets on the site's index. `just --list` shows the last comment
+# line as the description, so keep that line last.
+# Start a new deck: just new DIR/NAME "Title" "One line on what it covers".
+new PATH TITLE="" DESCRIPTION="":
+    @pandoc lua scripts/new-talk.lua {{quote(PATH)}} {{quote(TITLE)}} {{quote(DESCRIPTION)}}
 
 clean:
     rm -rf build
